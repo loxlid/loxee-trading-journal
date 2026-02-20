@@ -7,8 +7,11 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 
+// Handle Vercel's read-only filesystem by using /tmp
+const isVercel = process.env.VERCEL === '1';
+
 // Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, 'public', 'uploads');
+const uploadDir = isVercel ? '/tmp/uploads' : path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -35,7 +38,8 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Database setup
-const db = new sqlite3.Database('./database.sqlite', (err) => {
+const dbPath = isVercel ? '/tmp/database.sqlite' : './database.sqlite';
+const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database', err);
     } else {
@@ -214,6 +218,11 @@ app.get('/api/stats', authenticateToken, (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Start server only if not in serverless environment
+if (!isVercel) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;
