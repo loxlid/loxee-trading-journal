@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loxee Journal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#121212',
+                        darkcard: '#1e1e1e',
+                        primary: '#3b82f6',
+                        success: '#10b981',
+                        danger: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1f2937;
+            min-height: 100vh;
+        }
+
+        /* A subtle gradient background for the dark mode */
+        html.dark body {
+            background: linear-gradient(135deg, #0f172a 0%, #171717 100%);
+            color: #f3f4f6;
+        }
+    </style>
+</head>
+
+<body class="antialiased transition-colors duration-300">
+
+    <!-- Navbar -->
+    <nav
+        class="bg-white dark:bg-darkcard border-b border-gray-200 dark:border-gray-800 shadow-md transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center shrink-0">
+                    <span class="text-xl font-bold text-gray-900 dark:text-white tracking-widest uppercase">
+                        Loxee<span class="text-primary">Journal</span>
+                    </span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button id="theme-toggle"
+                        class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 transition-colors">
+                        <svg id="theme-icon-dark" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                            </path>
+                        </svg>
+                        <svg id="theme-icon-light" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                            </path>
+                        </svg>
+                    </button>
+                    <div id="nav-auth-buttons" class="flex gap-4 items-center">
+                        <!-- Dynamic auth buttons -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <!-- Notification Area -->
+        <div id="notification-area" class="mb-4 hidden p-4 rounded-lg font-medium text-center shadow"></div>
+
+        <!-- AUTH VIEW (Login / Register) -->
+        <div id="auth-view"
+            class="max-w-md mx-auto mt-10 bg-white dark:bg-darkcard p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 transition-colors duration-300">
+            <h2 id="auth-title" class="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white">Login to your
+                account</h2>
+            <form id="auth-form" class="space-y-4">
+                <div id="username-group" class="hidden">
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Username</label>
+                    <input type="text" id="username"
+                        class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-gray-900 dark:text-white transition-colors duration-300">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Email</label>
+                    <input type="email" id="email" required
+                        class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-gray-900 dark:text-white transition-colors duration-300">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Password</label>
+                    <input type="password" id="password" required
+                        class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-gray-900 dark:text-white transition-colors duration-300">
+                </div>
+                <button type="submit" id="auth-submit-btn"
+                    class="w-full bg-primary hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transform transition active:scale-95 shadow-lg shadow-primary/30">
+                    Login
+                </button>
+            </form>
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    <span id="auth-toggle-text">Don't have an account?</span>
+                    <button id="toggle-auth-mode" class="text-primary hover:underline font-medium ml-1">Register
+                        here</button>
+                </p>
+            </div>
+        </div>
+
+        <!-- DASHBOARD VIEW -->
+        <div id="dashboard-view" class="hidden space-y-8">
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div
+                    class="bg-white dark:bg-darkcard p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg flex flex-col justify-center transition-colors duration-300">
+                    <p class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Total Trades</p>
+                    <p id="stat-total" class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">0</p>
+                </div>
+                <div
+                    class="bg-white dark:bg-darkcard p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg flex flex-col justify-center transition-colors duration-300">
+                    <p class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Win Rate</p>
+                    <p id="stat-winrate" class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">0%
+                    </p>
+                </div>
+                <div
+                    class="bg-white dark:bg-darkcard p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg flex flex-col justify-center transition-colors duration-300">
+                    <p class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Win / Loss</p>
+                    <p class="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                        <span id="stat-wins" class="text-success">0</span> <span
+                            class="text-gray-300 dark:text-gray-600 text-lg sm:text-xl">/</span>
+                        <span id="stat-losses" class="text-danger">0</span>
+                    </p>
+                </div>
+                <div
+                    class="bg-white dark:bg-darkcard p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg flex flex-col justify-center transition-colors duration-300">
+                    <p class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Total PnL ($)</p>
+                    <p id="stat-pnl" class="text-2xl sm:text-3xl font-bold mt-1 text-gray-900 dark:text-white">0.00</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <!-- Add Trade Form -->
+                <div
+                    class="bg-white dark:bg-darkcard p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg h-fit transition-colors duration-300">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        New Trade
+                    </h3>
+                    <form id="trade-form" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Pair</label>
+                                <input type="text" id="pair" placeholder="e.g. BTC/USDT" required
+                                    class="w-full px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary outline-none text-gray-900 dark:text-white transition-colors duration-300">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Side</label>
+                                <select id="side" required
+                                    class="w-full px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary outline-none text-gray-900 dark:text-white transition-colors duration-300">
+                                    <option value="BUY">BUY / Long</option>
+                                    <option value="SELL">SELL / Short</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Entry</label>
+                                <input type="number" step="any" id="entry" required
+                                    class="w-full px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 outline-none text-gray-900 dark:text-white transition-colors duration-300">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">SL</label>
+                                <input type="number" step="any" id="sl"
+                                    class="w-full px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 outline-none text-gray-900 dark:text-white transition-colors duration-300">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">TP</label>
+                                <input type="number" step="any" id="tp"
+                                    class="w-full px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 outline-none text-gray-900 dark:text-white transition-colors duration-300">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Result (PnL
+                                in $)</label>
+                            <input type="number" step="any" id="result" placeholder="-10.50 or +50"
+                                class="w-full px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 outline-none text-gray-900 dark:text-white transition-colors duration-300">
+                        </div>
+                        <div class="grid grid-cols-1 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Chart
+                                    Image (Optional)</label>
+                                <input type="file" id="image" accept="image/*"
+                                    class="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-blue-600 transition-colors cursor-pointer bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 outline-none">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
+                                <textarea id="note" rows="2"
+                                    class="w-full px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 outline-none text-gray-900 dark:text-white transition-colors duration-300"></textarea>
+                            </div>
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-primary hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition active:scale-95 shadow-lg">
+                            Save Trade
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Trade List -->
+                <div
+                    class="xl:col-span-2 bg-white dark:bg-darkcard p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg transition-colors duration-300">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                            </path>
+                        </svg>
+                        Trade History
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr
+                                    class="text-gray-500 dark:text-gray-400 text-sm border-b border-gray-200 dark:border-gray-800">
+                                    <th class="pb-3 font-medium px-2">Date</th>
+                                    <th class="pb-3 font-medium px-2">Pair</th>
+                                    <th class="pb-3 font-medium px-2">Side</th>
+                                    <th class="pb-3 font-medium px-2">Entry</th>
+                                    <th class="pb-3 font-medium px-2">SL/TP</th>
+                                    <th class="pb-3 font-medium px-2">Note</th>
+                                    <th class="pb-3 font-medium text-center">Chart</th>
+                                    <th class="pb-3 font-medium px-2 text-right">PnL</th>
+                                    <th class="pb-3 font-medium text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trade-list-body" class="divide-y divide-gray-100 dark:divide-gray-800/60">
+                                <!-- Trades injected via JS -->
+                            </tbody>
+                        </table>
+                        <div id="empty-state" class="hidden py-8 text-center text-gray-500">
+                            No trades recorded yet. Start tracking your journal!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Image Viewer Modal -->
+    <div id="image-modal"
+        class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="relative max-w-5xl w-full flex flex-col items-center">
+            <button id="close-image-modal"
+                class="absolute -top-10 right-0 lg:-right-10 text-white hover:text-gray-300 bg-gray-800/50 hover:bg-gray-800 rounded-full p-2 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+            <img id="modal-image" src="" alt="Chart Attachment"
+                class="max-h-[85vh] object-contain rounded-lg shadow-2xl border border-gray-700">
+        </div>
+    </div>
+
+    <!-- Trade Details Modal -->
+    <div id="details-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div
+            class="bg-white dark:bg-darkcard w-full max-w-2xl rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden transform transition-transform duration-300 scale-95">
+            <!-- Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800/60">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span id="detail-pair" class="tracking-widest">PAIR</span>
+                    <span id="detail-side" class="text-xs px-2 py-1 rounded">SIDE</span>
+                </h3>
+                <button id="close-details-modal"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="p-6 space-y-6">
+                <!-- Data Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div
+                        class="bg-gray-50 dark:bg-[#2a2a2a] p-3 rounded-xl border border-gray-100 dark:border-gray-800/50">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">Entry Price</p>
+                        <p id="detail-entry" class="font-semibold text-gray-900 dark:text-white">-</p>
+                    </div>
+                    <div
+                        class="bg-gray-50 dark:bg-[#2a2a2a] p-3 rounded-xl border border-gray-100 dark:border-gray-800/50">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">Stop Loss</p>
+                        <p id="detail-sl" class="font-semibold text-gray-900 dark:text-white">-</p>
+                    </div>
+                    <div
+                        class="bg-gray-50 dark:bg-[#2a2a2a] p-3 rounded-xl border border-gray-100 dark:border-gray-800/50">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">Take Profit</p>
+                        <p id="detail-tp" class="font-semibold text-gray-900 dark:text-white">-</p>
+                    </div>
+                    <div
+                        class="bg-gray-50 dark:bg-[#2a2a2a] p-3 rounded-xl border border-gray-100 dark:border-gray-800/50">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">PnL / Result</p>
+                        <p id="detail-pnl" class="font-bold">-</p>
+                    </div>
+                </div>
+
+                <!-- Notes & Date -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Trade Notes</p>
+                        <div class="bg-gray-50 dark:bg-[#2a2a2a] p-4 rounded-xl border border-gray-100 dark:border-gray-800/50 min-h-[100px] text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap"
+                            id="detail-note">No notes provided for this trade.</div>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Trade Date</p>
+                        <p id="detail-date"
+                            class="text-sm text-gray-900 dark:text-white font-medium bg-gray-50 dark:bg-[#2a2a2a] p-4 rounded-xl border border-gray-100 dark:border-gray-800/50 mb-4">
+                            -</p>
+
+                        <!-- Mini Chart Preview (if exists) -->
+                        <div id="detail-chart-wrapper" class="hidden">
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Chart Attachment</p>
+                            <button id="detail-view-img-btn"
+                                class="w-full relative group overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+                                <img id="detail-chart-img" src=""
+                                    class="w-full h-32 object-cover transition-transform duration-300 group-hover:scale-105"
+                                    alt="Chart thumbnail">
+                                <div
+                                    class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span
+                                        class="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                            </path>
+                                        </svg> Expand
+                                    </span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div
+                class="p-4 border-t border-gray-100 dark:border-gray-800/60 bg-gray-50 dark:bg-[#202020] flex justify-end">
+                <button id="close-details-btn-bottom"
+                    class="px-5 py-2 rounded-lg font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
