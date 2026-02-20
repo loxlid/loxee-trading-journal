@@ -35,7 +35,9 @@ const SECRET_KEY = 'super_secret_trading_key_change_me_in_prod';
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+const publicPath = isVercel ? path.join(process.cwd(), 'public') : path.join(__dirname, 'public');
+app.use(express.static(publicPath));
+app.use('/uploads', express.static(uploadDir)); // Explicitly serve uploads folder
 
 // Database setup
 const dbPath = isVercel ? '/tmp/database.sqlite' : './database.sqlite';
