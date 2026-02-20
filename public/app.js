@@ -18,6 +18,11 @@ const authToggleText = document.getElementById('auth-toggle-text');
 const notificationArea = document.getElementById('notification-area');
 const usernameGroup = document.getElementById('username-group');
 const usernameInput = document.getElementById('username');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const togglePasswordBtn = document.getElementById('toggle-password');
+const eyeIconOpen = document.getElementById('eye-icon-open');
+const eyeIconClosed = document.getElementById('eye-icon-closed');
 
 // Modal Elements
 const imageModal = document.getElementById('image-modal');
@@ -86,6 +91,17 @@ function showAuth() {
     authView.classList.remove('hidden');
     dashboardView.classList.add('hidden');
     navAuthButtons.innerHTML = '';
+    
+    // Ensure we are in login mode after logout
+    if (!isLoginMode) {
+        toggleAuthBtn.click();
+    }
+    
+    // Auto-fill saved email if available
+    const savedEmail = localStorage.getItem('savedEmail');
+    if (savedEmail) {
+        emailInput.value = savedEmail;
+    }
 }
 
 function showDashboard() {
@@ -127,12 +143,26 @@ toggleAuthBtn.addEventListener('click', (e) => {
     }
 });
 
+// Password Visibility Toggle
+togglePasswordBtn.addEventListener('click', () => {
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+    
+    if (type === 'text') {
+        eyeIconOpen.classList.remove('hidden');
+        eyeIconClosed.classList.add('hidden');
+    } else {
+        eyeIconOpen.classList.add('hidden');
+        eyeIconClosed.classList.remove('hidden');
+    }
+});
+
 // Auth Submit
 authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = usernameInput.value;
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+    const email = emailInput.value;
+    const password = passwordInput.value;
     const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
 
     try {
@@ -150,21 +180,28 @@ authForm.addEventListener('submit', async (e) => {
         if (isLoginMode) {
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('savedEmail', email);
             currentUser = data.user;
             authForm.reset();
             showDashboard();
             showNotification('Logged in successfully!');
         } else {
+            localStorage.setItem('savedEmail', email);
             showNotification('Registration successful! Please login.');
-            isLoginMode = true;
-            toggleAuthBtn.click(); // Reset to login mode visually
-            toggleAuthBtn.click(); // fix toggle state click issue
+            
+            // Switch to login mode properly
             isLoginMode = true;
             authTitle.textContent = 'Login to your account';
             authSubmitBtn.textContent = 'Login';
             authToggleText.textContent = 'Don\'t have an account?';
             toggleAuthBtn.textContent = 'Register here';
-            document.getElementById('password').value = '';
+            usernameGroup.classList.add('hidden');
+            usernameInput.required = false;
+            
+            passwordInput.value = '';
+            
+            // Auto-fill the email that was just registered
+            emailInput.value = email;
         }
 
     } catch (err) {
