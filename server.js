@@ -1,84 +1,55 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { sql } = require('@vercel/postgres');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const path = require('path');
-const multer = require('multer');
-const fs = require('fs');
-
-// Handle Vercel's read-only filesystem by using /tmp
-const isVercel = process.env.VERCEL === '1';
-
-// Create uploads directory if it doesn't exist
-const uploadDir = isVercel ? '/tmp/uploads' : path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure multer storage
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage: storage });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SECRET_KEY = 'super_secret_trading_key_change_me_in_prod';
+const SECRET_KEY = process.env.JWT_SECRET || 'super_secret_trading_key_change_me_in_prod';
+const isVercel = process.env.VERCEL === '1';
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 const publicPath = isVercel ? path.join(process.cwd(), 'public') : path.join(__dirname, 'public');
 app.use(express.static(publicPath));
-app.use('/uploads', express.static(uploadDir)); // Explicitly serve uploads folder
 
-// Database setup
-const dbPath = isVercel ? '/tmp/database.sqlite' : './database.sqlite';
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database', err);
-    } else {
-        console.log('Connected to SQLite database.');
+// Initialize Database Tables
+async function initDb() {
+    try {
+        await sql`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL
+            );
+        `;
 
-        // Performance & stability pragmas
-        db.run('PRAGMA journal_mode = WAL;');
-        db.run('PRAGMA synchronous = NORMAL;');
-        db.run('PRAGMA busy_timeout = 5000;');
-
-        // Create Users Table
-        db.run(`CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            email TEXT UNIQUE,
-            password TEXT
-        )`);
-
-        // Create Trades Table
-        db.run(`CREATE TABLE IF NOT EXISTS trades (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            pair TEXT,
-            side TEXT,
-            entry REAL,
-            sl REAL,
-            tp REAL,
-            result REAL,
-            note TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        )`, () => {
-            // Attempt to add column in case it doesn't exist in an older DB schema
-            db.run(`ALTER TABLE trades ADD COLUMN image_url TEXT`, (err) => { });
-        });
+        await sql`
+            CREATE TABLE IF NOT EXISTS trades (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                pair VARCHAR(50) NOT NULL,
+                side VARCHAR(10) NOT NULL,
+                entry NUMERIC NOT NULL,
+                sl NUMERIC,
+                tp NUMERIC,
+                result NUMERIC DEFAULT 0,
+                note TEXT,
+                image_url TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        `;
+        console.log('PostgreSQL Database initialized successfully.');
+    } catch (error) {
+        console.error('Error initializing database:', error);
     }
-});
+}
+
+initDb();
 
 // --- Auth Middleware ---
 const authenticateToken = (req, res, next) => {
@@ -97,35 +68,44 @@ const authenticateToken = (req, res, next) => {
 // --- AUTHENTICATION ROUTES ---
 
 // Register
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
         return res.status(400).json({ error: 'Username, email and password are required' });
     }
 
-    db.get('SELECT email, username FROM users WHERE email = ? OR username = ?', [email, username], (err, row) => {
-        if (row) {
+    try {
+        const { rows: existingUsers } = await sql`SELECT email, username FROM users WHERE email = ${email} OR username = ${username}`;
+
+        if (existingUsers.length > 0) {
             return res.status(400).json({ error: 'Email or Username already exists' });
         }
 
         const hashedPassword = bcrypt.hashSync(password, 10);
 
-        db.run('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', [username, email, hashedPassword], function (err) {
-            if (err) {
-                return res.status(500).json({ error: 'Failed to register user' });
-            }
-            res.status(201).json({ message: 'User registered successfully', userId: this.lastID });
-        });
-    });
+        const { rows } = await sql`
+            INSERT INTO users (username, email, password) 
+            VALUES (${username}, ${email}, ${hashedPassword}) 
+            RETURNING id
+        `;
+
+        res.status(201).json({ message: 'User registered successfully', userId: rows[0].id });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ error: 'Failed to register user' });
+    }
 });
 
 // Login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
 
-    db.get('SELECT * FROM users WHERE email = ?', [email], (err, user) => {
-        if (err || !user) {
+    try {
+        const { rows } = await sql`SELECT * FROM users WHERE email = ${email}`;
+        const user = rows[0];
+
+        if (!user) {
             return res.status(400).json({ error: 'Invalid email or password' });
         }
 
@@ -136,68 +116,72 @@ app.post('/api/auth/login', (req, res) => {
 
         const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, SECRET_KEY, { expiresIn: '30d' });
         res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
-    });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Internal server error during login' });
+    }
 });
 
 // --- TRADE ROUTES ---
 
 // Get all trades for user
-app.get('/api/trades', authenticateToken, (req, res) => {
-    db.all('SELECT * FROM trades WHERE user_id = ? ORDER BY created_at DESC', [req.user.id], (err, rows) => {
-        if (err) {
-            return res.status(500).json({ error: 'Failed to fetch trades' });
-        }
+app.get('/api/trades', authenticateToken, async (req, res) => {
+    try {
+        const { rows } = await sql`SELECT * FROM trades WHERE user_id = ${req.user.id} ORDER BY created_at DESC`;
         res.json(rows);
-    });
+    } catch (error) {
+        console.error('Fetch trades error:', error);
+        res.status(500).json({ error: 'Failed to fetch trades' });
+    }
 });
 
 // Add a trade
-app.post('/api/trades', authenticateToken, upload.single('image'), (req, res) => {
-    const { pair, side, entry, sl, tp, result, note } = req.body;
+app.post('/api/trades', authenticateToken, async (req, res) => {
+    const { pair, side, entry, sl, tp, result, note, image_url } = req.body;
     const userId = req.user.id;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!pair || !side || entry === undefined) {
-        if (req.file) fs.unlinkSync(req.file.path);
         return res.status(400).json({ error: 'Pair, side, and entry are required' });
     }
 
-    const query = `INSERT INTO trades (user_id, pair, side, entry, sl, tp, result, note, image_url) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    try {
+        const { rows } = await sql`
+            INSERT INTO trades (user_id, pair, side, entry, sl, tp, result, note, image_url) 
+            VALUES (${userId}, ${pair}, ${side}, ${entry}, ${sl || null}, ${tp || null}, ${result || 0}, ${note || null}, ${image_url || null})
+            RETURNING id
+        `;
 
-    db.run(query, [userId, pair, side, entry, sl, tp, result || 0, note, imageUrl], function (err) {
-        if (err) {
-            if (req.file) fs.unlinkSync(req.file.path);
-            return res.status(500).json({ error: 'Failed to add trade' });
-        }
-        res.status(201).json({ message: 'Trade added successfully', tradeId: this.lastID });
-    });
+        res.status(201).json({ message: 'Trade added successfully', tradeId: rows[0].id });
+    } catch (error) {
+        console.error('Add trade error:', error);
+        res.status(500).json({ error: 'Failed to add trade' });
+    }
 });
 
 // Delete a trade
-app.delete('/api/trades/:id', authenticateToken, (req, res) => {
+app.delete('/api/trades/:id', authenticateToken, async (req, res) => {
     const tradeId = req.params.id;
     const userId = req.user.id;
 
-    db.run('DELETE FROM trades WHERE id = ? AND user_id = ?', [tradeId, userId], function (err) {
-        if (err) {
-            return res.status(500).json({ error: 'Failed to delete trade' });
-        }
-        if (this.changes === 0) {
+    try {
+        const { rowCount } = await sql`DELETE FROM trades WHERE id = ${tradeId} AND user_id = ${userId}`;
+
+        if (rowCount === 0) {
             return res.status(404).json({ error: 'Trade not found or unauthorized' });
         }
         res.json({ message: 'Trade deleted successfully' });
-    });
+    } catch (error) {
+        console.error('Delete trade error:', error);
+        res.status(500).json({ error: 'Failed to delete trade' });
+    }
 });
 
 // --- STATS ROUTE ---
-app.get('/api/stats', authenticateToken, (req, res) => {
+app.get('/api/stats', authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
-    db.all('SELECT result FROM trades WHERE user_id = ?', [userId], (err, rows) => {
-        if (err) {
-            return res.status(500).json({ error: 'Failed to fetch stats' });
-        }
+    try {
+        const { rows } = await sql`SELECT result FROM trades WHERE user_id = ${userId}`;
 
         const totalTrades = rows.length;
         let winCount = 0;
@@ -205,10 +189,12 @@ app.get('/api/stats', authenticateToken, (req, res) => {
         let totalPnl = 0;
 
         rows.forEach(trade => {
-            totalPnl += (trade.result || 0);
-            if (trade.result > 0) {
+            // PostgreSQL returns NUMERIC decimal columns as strings in node-postgres by default, so we parse it
+            const pnl = parseFloat(trade.result) || 0;
+            totalPnl += pnl;
+            if (pnl > 0) {
                 winCount++;
-            } else if (trade.result < 0) {
+            } else if (pnl < 0) {
                 lossCount++;
             }
         });
@@ -222,7 +208,10 @@ app.get('/api/stats', authenticateToken, (req, res) => {
             winrate: parseFloat(winrate),
             totalPnl
         });
-    });
+    } catch (error) {
+        console.error('Fetch stats error:', error);
+        res.status(500).json({ error: 'Failed to fetch stats' });
+    }
 });
 
 // Start server only if not in serverless environment
