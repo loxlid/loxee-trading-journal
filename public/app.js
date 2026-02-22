@@ -331,31 +331,36 @@ function renderTrades(trades) {
 document.getElementById('trade-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const payload = {
-        pair: document.getElementById('pair').value.toUpperCase(),
-        side: document.getElementById('side').value,
-        entry: parseFloat(document.getElementById('entry').value),
-    };
+    const formData = new FormData();
+    formData.append('pair', document.getElementById('pair').value.toUpperCase());
+    formData.append('side', document.getElementById('side').value);
+    formData.append('entry', document.getElementById('entry').value);
 
     const sl = document.getElementById('sl').value;
-    if (sl) payload.sl = parseFloat(sl);
+    if (sl) formData.append('sl', sl);
 
     const tp = document.getElementById('tp').value;
-    if (tp) payload.tp = parseFloat(tp);
+    if (tp) formData.append('tp', tp);
 
     const result = document.getElementById('result').value;
-    if (result) payload.result = parseFloat(result);
+    if (result) formData.append('result', result);
 
     const note = document.getElementById('note').value;
-    if (note) payload.note = note;
+    if (note) formData.append('note', note);
 
-    const imageUrl = document.getElementById('image').value;
-    if (imageUrl) payload.image_url = imageUrl;
+    const imageFile = document.getElementById('image').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+    // Also support external URL if they pasted it in a text mode
+    else if (document.getElementById('image').value && typeof document.getElementById('image').value === 'string') {
+        formData.append('image_url', document.getElementById('image').value);
+    }
 
     try {
         const res = await authFetch('/trades', {
             method: 'POST',
-            body: JSON.stringify(payload)
+            body: formData
         });
 
         if (!res.ok) {

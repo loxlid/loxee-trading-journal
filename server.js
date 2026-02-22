@@ -4,6 +4,19 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
+
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dgmo2y0ho',
+    api_key: process.env.CLOUDINARY_API_KEY || '779742922652255',
+    api_secret: process.env.CLOUDINARY_API_SECRET || '21lW7UonXeLUP3rudA7PtkZh3-w'
+});
+
+// Configure multer to use memory storage
+const upload = multer({ storage: multer.memoryStorage() });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -136,8 +149,8 @@ app.get('/api/trades', authenticateToken, async (req, res) => {
 });
 
 // Add a trade
-app.post('/api/trades', authenticateToken, async (req, res) => {
-    const { pair, side, entry, sl, tp, result, note, image_url } = req.body;
+app.post('/api/trades', authenticateToken, upload.single('image'), async (req, res) => {
+    const { pair, side, entry, sl, tp, result, note } = req.body;
     const userId = req.user.id;
 
     if (!pair || !side || entry === undefined) {
@@ -145,13 +158,40 @@ app.post('/api/trades', authenticateToken, async (req, res) => {
     }
 
     try {
+        let finalImageUrl = req.body.image_url || null;
+
+        // If a file was uploaded, upload it to Cloudinary
+        if (req.file) {
+            const uploadToCloudinary = () => {
+                return new Promise((resolve, reject) => {
+                    const stream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: "jurnal-trade",
+                            resource_type: "auto"
+                        },
+                        (error, result) => {
+                            if (error) {
+                                console.error('Cloudinary upload error:', error);
+                                reject(error);
+                            } else {
+                                resolve(result.secure_url);
+                            }
+                        }
+                    );
+                    streamifier.createReadStream(req.file.buffer).pipe(stream);
+                });
+            };
+
+            finalImageUrl = await uploadToCloudinary();
+        }
+
         const { rows } = await sql`
             INSERT INTO trades (user_id, pair, side, entry, sl, tp, result, note, image_url) 
-            VALUES (${userId}, ${pair}, ${side}, ${entry}, ${sl || null}, ${tp || null}, ${result || 0}, ${note || null}, ${image_url || null})
+            VALUES (${userId}, ${pair}, ${side}, ${entry}, ${sl || null}, ${tp || null}, ${result || 0}, ${note || null}, ${finalImageUrl})
             RETURNING id
         `;
 
-        res.status(201).json({ message: 'Trade added successfully', tradeId: rows[0].id });
+        res.status(201).json({ message: 'Trade added successfully', tradeId: rows[0].id, image_url: finalImageUrl });
     } catch (error) {
         console.error('Add trade error:', error);
         res.status(500).json({ error: 'Failed to add trade' });
