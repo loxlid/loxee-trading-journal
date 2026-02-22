@@ -91,12 +91,12 @@ function showAuth() {
     authView.classList.remove('hidden');
     dashboardView.classList.add('hidden');
     navAuthButtons.innerHTML = '';
-    
+
     // Ensure we are in login mode after logout
     if (!isLoginMode) {
         toggleAuthBtn.click();
     }
-    
+
     // Auto-fill saved email if available
     const savedEmail = localStorage.getItem('savedEmail');
     if (savedEmail) {
@@ -147,7 +147,7 @@ toggleAuthBtn.addEventListener('click', (e) => {
 togglePasswordBtn.addEventListener('click', () => {
     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
     passwordInput.setAttribute('type', type);
-    
+
     if (type === 'text') {
         eyeIconOpen.classList.remove('hidden');
         eyeIconClosed.classList.add('hidden');
@@ -188,7 +188,7 @@ authForm.addEventListener('submit', async (e) => {
         } else {
             localStorage.setItem('savedEmail', email);
             showNotification('Registration successful! Please login.');
-            
+
             // Switch to login mode properly
             isLoginMode = true;
             authTitle.textContent = 'Login to your account';
@@ -197,9 +197,9 @@ authForm.addEventListener('submit', async (e) => {
             toggleAuthBtn.textContent = 'Register here';
             usernameGroup.classList.add('hidden');
             usernameInput.required = false;
-            
+
             passwordInput.value = '';
-            
+
             // Auto-fill the email that was just registered
             emailInput.value = email;
         }
@@ -235,6 +235,7 @@ async function loadStats() {
     try {
         const res = await authFetch('/stats');
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load stats');
 
         document.getElementById('stat-total').textContent = data.totalTrades;
         document.getElementById('stat-winrate').textContent = `${data.winrate}%`;
@@ -254,6 +255,7 @@ async function loadTrades() {
     try {
         const res = await authFetch('/trades');
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load trades');
         allTrades = data;
         renderTrades(data);
     } catch (e) {
@@ -316,7 +318,7 @@ function renderTrades(trades) {
                 ${pnlValue > 0 ? '+' : ''}${pnlValue}
             </td>
             <td class="py-3 text-center">
-                <button onclick="deleteTrade(${trade.id})" class="text-gray-500 hover:text-red-500 hover:bg-red-500/10 p-1.5 rounded transition">
+                <button onclick="event.stopPropagation(); deleteTrade(${trade.id})" class="text-gray-500 hover:text-red-500 hover:bg-red-500/10 p-1.5 rounded transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
             </td>

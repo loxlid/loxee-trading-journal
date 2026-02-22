@@ -47,6 +47,11 @@ const db = new sqlite3.Database(dbPath, (err) => {
     } else {
         console.log('Connected to SQLite database.');
 
+        // Performance & stability pragmas
+        db.run('PRAGMA journal_mode = WAL;');
+        db.run('PRAGMA synchronous = NORMAL;');
+        db.run('PRAGMA busy_timeout = 5000;');
+
         // Create Users Table
         db.run(`CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,7 +134,7 @@ app.post('/api/auth/login', (req, res) => {
             return res.status(400).json({ error: 'Invalid email or password' });
         }
 
-        const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, SECRET_KEY, { expiresIn: '24h' });
+        const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, SECRET_KEY, { expiresIn: '30d' });
         res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
     });
 });
