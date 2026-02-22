@@ -93,7 +93,7 @@ app.post('/api/auth/register', async (req, res) => {
         res.status(201).json({ message: 'User registered successfully', userId: rows[0].id });
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ error: 'Failed to register user' });
+        res.status(500).json({ error: error.message || 'Failed to register user' });
     }
 });
 
@@ -118,7 +118,7 @@ app.post('/api/auth/login', async (req, res) => {
         res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Internal server error during login' });
+        res.status(500).json({ error: error.message || 'Internal server error during login' });
     }
 });
 
