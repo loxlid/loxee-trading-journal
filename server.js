@@ -204,11 +204,41 @@ app.delete('/api/trades/:id', authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     try {
-        const { rowCount } = await sql`DELETE FROM trades WHERE id = ${tradeId} AND user_id = ${userId}`;
+        // First, get the image_url to delete from Cloudinary if it exists
+        const { rows: tradeRows } = await sql`SELECT image_url FROM trades WHERE id = ${tradeId} AND user_id = ${userId}`;
 
-        if (rowCount === 0) {
+        if (tradeRows.length === 0) {
             return res.status(404).json({ error: 'Trade not found or unauthorized' });
         }
+
+        const trade = tradeRows[0];
+
+        // Delete from Cloudinary if it's a Cloudinary URL
+        if (trade.image_url && trade.image_url.includes('res.cloudinary.com')) {
+            try {
+                // Extract public_id from Cloudinary URL
+                // Example: https://res.cloudinary.com/dgmo2y0ho/image/upload/v123456789/jurnal-trade/abc123xyz.png
+                // public_id -> jurnal-trade/abc123xyz
+                const urlParts = trade.image_url.split('/');
+                const filenameAndExt = urlParts[urlParts.length - 1]; // "abc123xyz.png"
+                const folderName = urlParts[urlParts.length - 2];     // "jurnal-trade"
+                const publicId = `${folderName}/${filenameAndExt.split('.')[0]}`; // "jurnal-trade/abc123xyz"
+
+                // Call Cloudinary API
+                cloudinary.uploader.destroy(publicId, (err, result) => {
+                    if (err) console.error('Cloudinary deletion error:', err);
+                    else console.log('Cloudinary successfully deleted:', result);
+                });
+
+            } catch (cloudErr) {
+                console.error("Error parsing/deleting Cloudinary image:", cloudErr);
+                // Continue with DB deletion even if Cloudinary fails to avoid stuck data
+            }
+        }
+
+        // Delete from Postgres Database
+        const { rowCount } = await sql`DELETE FROM trades WHERE id = ${tradeId} AND user_id = ${userId}`;
+
         res.json({ message: 'Trade deleted successfully' });
     } catch (error) {
         console.error('Delete trade error:', error);
